@@ -13,8 +13,11 @@ import type { Fetch } from '../utils/fetch';
 
 type Webhook = Modules.WebhookStore.Webhook;
 
+type SignatureGenerator = (webhook: Webhook, body: string) => string;
+
 interface Config {
   defaultHeaders: Record<string, string>;
+  signatureGenerator?: SignatureGenerator;
 }
 
 interface ConstructorParameters {
@@ -114,18 +117,25 @@ class WebhookRunner {
   run(webhook: Webhook, event: string, info = {}) {
     const { url, headers } = webhook;
 
+    const body = JSON.stringify({
+      event,
+      createdAt: new Date(),
+      ...info,
+    });
+
+    const signatureGenerator = this.config.signatureGenerator;
+
     return this.fetch(url, {
       method: 'post',
-      body: JSON.stringify({
-        event,
-        createdAt: new Date(),
-        ...info,
-      }),
+      body,
       headers: {
         ...this.config.defaultHeaders,
         ...headers,
         'X-Strapi-Event': event,
         'Content-Type': 'application/json',
+        ...(signatureGenerator && {
+          'X-Webhook-Signature': signatureGenerator(webhook, body)
+        })
       },
       signal: AbortSignal.timeout(10000),
     })
