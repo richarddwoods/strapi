@@ -67,7 +67,7 @@ class WebhookRunner {
       );
     }
 
-    this.config = _.merge(defaultConfiguration, configuration);
+    this.config = _.merge({}, defaultConfiguration, configuration);
 
     this.queue = new WorkerQueue({ logger, concurrency: 5 });
 
